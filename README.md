@@ -15,13 +15,11 @@
 
 ### 학습목표
 
-
 멘티인 저의 학습 목표는 다음과 같습니다.
 
 > - TypeScript 개발 환경을 구성하고 개발을 시작 할 수 있는 수준
 > - TypeScript 문법 숙달
 > - TypeScript 스터디를 통해 취업문이 좀 더 열릴 수 있도록 함
-
 
 ### 학습활동
 
@@ -34,15 +32,27 @@
 
 2022년 6월 20일을 1주차로 하여 16주차까지 진행합니다.
 
-> 1주 - The TypeScript Handbook  
-> 2주 - The Basics  
+<details>
+<summary>주차별 학습 내용</summary>
+
+> 1주 - The TypeScript Handbook ✔️  
+> 2주 - The Basics ✔️  
 > 3주 - Everyday Types  
 > 4주 - Narrowing  
 > 5주 - More on Functions  
 > 6주 - Object Types  
-> 7주 ~ 13주 - Creating Types from Types  
-> 14 ~ 15주 - Classes  
+> 7주 - Creating Types from Types  
+> 8주 - Creating Types from Types  
+> 9주 - Creating Types from Types  
+> 10주 - Creating Types from Types  
+> 11주 - Creating Types from Types  
+> 12주 - Creating Types from Types  
+> 13주 - Creating Types from Types  
+> 14주 - Classes  
+> 15주 - Classes  
 > 16주 : Modules  
+
+</details>
 
 ### 관련 링크
 
