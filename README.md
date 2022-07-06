@@ -37,7 +37,7 @@
 
 > 1주 - The TypeScript Handbook ✔️  
 > 2주 - The Basics ✔️  
-> 3주 - Everyday Types  
+> 3주 - Everyday Types ✔️  
 > 4주 - Narrowing  
 > 5주 - More on Functions  
 > 6주 - Object Types  
@@ -56,5 +56,5 @@
 
 ### 관련 링크
 
-- [TypeSctript Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
+- [TS Handbook](https://www.typescriptlang.org/docs/handbook/intro.html)
 - [TS Playground](https://www.typescriptlang.org/play/)
