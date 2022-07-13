@@ -38,7 +38,7 @@
 > 1주 - The TypeScript Handbook ✔️  
 > 2주 - The Basics ✔️  
 > 3주 - Everyday Types ✔️  
-> 4주 - Narrowing  
+> 4주 - Narrowing ✔️  
 > 5주 - More on Functions  
 > 6주 - Object Types  
 > 7주 - Creating Types from Types  
