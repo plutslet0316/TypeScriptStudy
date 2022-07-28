@@ -40,7 +40,7 @@
 > 3주 - Everyday Types ✔️  
 > 4주 - Narrowing ✔️  
 > 5주 - More on Functions ✔️  
-> 6주 - Object Types  
+> 6주 - Object Types ✔️  
 > 7주 - Creating Types from Types  
 > 8주 - Creating Types from Types  
 > 9주 - Creating Types from Types  
