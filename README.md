@@ -15,7 +15,7 @@
 
 ### 학습목표
 
-멘티인 저의 학습 목표는 다음과 같습니다.
+저의 학습 목표는 다음과 같습니다.
 
 > - TypeScript 개발 환경을 구성하고 개발을 시작 할 수 있는 수준
 > - TypeScript 문법 숙달
@@ -23,14 +23,15 @@
 
 ### 학습활동
 
-멘티인 저의 활동은 다음과 같습니다.
+저의 활동은 다음과 같습니다.
 
 > - 학습한 내용 요약 생성(파워포인트 또는 GitHub)
-> - 깃허브에 생성한 문서 및 소스코드 기록
+> - 생성한 문서 및 소스코드를 깃허브에 기록
 
 ### 진행
 
-2022년 6월 20일을 1주차로 하여 16주차까지 진행합니다.
+2022년 6월 20일을 1주차로 하여 16주차까지 예정되어 있습니다.
+추가로 7주차에 오프라인 모임을 가졌습니다.
 
 <details>
 <summary>주차별 학습 내용</summary>
@@ -41,16 +42,17 @@
 > 4주 - Narrowing ✔️  
 > 5주 - More on Functions ✔️  
 > 6주 - Object Types ✔️  
-> 7주 - Creating Types from Types  
+> 7주 - 오프라인 스터디 ✔️  
 > 8주 - Creating Types from Types  
 > 9주 - Creating Types from Types  
 > 10주 - Creating Types from Types  
 > 11주 - Creating Types from Types  
 > 12주 - Creating Types from Types  
 > 13주 - Creating Types from Types  
-> 14주 - Classes  
+> 14주 - Creating Types from Types  
 > 15주 - Classes  
-> 16주 : Modules  
+> 16주 - Classes  
+> 17주 : Modules  
 
 </details>
 

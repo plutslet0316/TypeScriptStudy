@@ -1,0 +1,59 @@
+<html>
+
+<head>
+    <title>Canvas Sample</title>
+    <style>
+        td{
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="800" style="border: 1px solid black; float: left;">
+    </canvas>
+
+    <table>
+        <tr>
+            <td>중력 :</td>
+            <td><input id="gravity" type="range" min="0" max="10" value="8" step="0.1" onchange="app.valueChange()"></td>
+            <td name="gravity"></td>
+        </tr>
+        <tr>
+            <td>가속 :</td>
+            <td><input id="force" type="range" min="0.9" max="1" value="0.94" step="0.001" onchange="app.valueChange()"></td>
+            <td name="force"></td>
+        </tr>
+        <tr>
+            <td>작용점 :</td>
+            <td><input id="minSpeed" type="range" min="0" max="1" value="0.35" step="0.001" onchange="app.valueChange()"></td>
+            <td name="minSpeed"></td>
+        </tr>
+        <tr>
+            <td>마찰 :</td>
+            <td><input id="friction" type="range" min="0.9" max="1" value="0.98" step="0.01" onchange="app.valueChange()" ></td>
+            <td name="friction"></td>
+        </tr>
+        <tr>
+            <td>트램펄린 :</td>
+            <td><input id="trampolin" type="range" min="1" max="1.5" value="1" step="0.5" onchange="app.valueChange()"></td>
+            <td name="trampolin"></td>
+        </tr>
+    </table>
+
+
+    <p></p>
+    
+    <button id="add">add 10 circles</button>
+
+
+    <script src="main.js"></script>
+    <script type="text/javascript">
+        const app = new DrawingApp(document.getElementById('canvas'));
+
+        const button = document.getElementById('add');
+        button.onclick = () => app.addCircles(10);
+    </script>
+</body>
+
+</html>
