@@ -1,16 +1,28 @@
 var DrawingApp = /** @class */ (function () {
-    function DrawingApp(canvas) {
+    function DrawingApp(canvas, fps) {
+        if (fps === void 0) { fps = 120; }
         var _this = this;
         this.circles = [];
         this.colors = ["red", "green", "blue"];
         this.colorsCount = 0;
-        this.redraw = function () {
+        this.redraw = function (timestamp) {
             _this.context.fillStyle = "white";
             _this.context.fillRect(0, 0, _this.canvas.width, _this.canvas.height);
+            if (_this.start === undefined && _this.then === undefined) {
+                _this.start = window.performance.now(); // 시작 값
+                _this.then = window.performance.now(); // 이후 변하는 값
+                // console.log(this.start + " " + this.then)
+            }
             for (var _i = 0, _a = _this.circles; _i < _a.length; _i++) {
                 var circle = _a[_i];
                 _this.drawCircle(circle);
-                _this.moveCircle(circle);
+            }
+            for (var elapsed = timestamp - _this.then; elapsed >= _this.fpsInterval; elapsed -= _this.fpsInterval) {
+                _this.then = timestamp - (elapsed % _this.fpsInterval);
+                for (var _b = 0, _c = _this.circles; _b < _c.length; _b++) {
+                    var circle = _c[_b];
+                    _this.moveCircle(circle);
+                }
             }
             requestAnimationFrame(_this.redraw);
         };
@@ -33,9 +45,12 @@ var DrawingApp = /** @class */ (function () {
             var color = _this.getColor();
             _this.valueChange();
             for (var i = 0; i < numbers; i++) {
+                var x = _this.canvas.width * Math.random();
+                // x가 영역을 벗어나지 않도록 
+                x = x < 42 ? 46 : x > _this.canvas.width - 42 ? _this.canvas.width - 46 : x;
                 _this.circles.push({
                     pos: {
-                        x: _this.canvas.width * Math.random(),
+                        x: x,
                         y: _this.canvas.height * Math.random(),
                         xInc: (Math.random() > 0.5 ? 1 : -1) * 10 * Math.random() + 1,
                         yInc: 5,
@@ -49,6 +64,7 @@ var DrawingApp = /** @class */ (function () {
         };
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
+        this.fpsInterval = 1000 / fps;
         this.valueChange();
         this.addCircles(10);
         requestAnimationFrame(this.redraw);
@@ -86,7 +102,7 @@ var DrawingApp = /** @class */ (function () {
             circle.pos.ySpeed /= force;
         }
         // 영역
-        if (circle.pos.x < 0 || circle.pos.x > this.canvas.width) {
+        if (circle.pos.x < circle.radius || circle.pos.x > this.canvas.width - circle.radius) {
             circle.pos.xSpeed *= friction;
             circle.pos.xInc *= -1;
         }
