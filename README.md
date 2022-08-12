@@ -30,30 +30,27 @@
 
 ### 진행
 
-2022년 6월 20일을 1주차로 하여 16주차까지 예정되어 있습니다.
-추가로 1주차 스터디 전, 7주차 스터디 전에 오프라인 모임을 가졌습니다.
+6월 20일을 1주차로 하여 16주차까지 예정되어 있었으나, 8월 29일인 11주차까지해서 1차로 마무리 짓는 것으로 정해졌습니다.
+
+**참고사항**
+
+- 7주차에 오프라인 모임을 가졌고, 스터디 내용은 [week00](./week00/) 안에 있는 [공튀기기](./week00/bounced_ball/) 예제입니다.
 
 <details>
 <summary>주차별 학습 내용</summary>
 
-> -주 - 오프라인 모임 ✔️  
-> 1주 - The TypeScript Handbook ✔️  
-> 2주 - The Basics ✔️  
-> 3주 - Everyday Types ✔️  
-> 4주 - Narrowing ✔️  
-> 5주 - More on Functions ✔️  
-> 6주 - Object Types ✔️  
-> -주 - 오프라인 모임 ✔️  
-> 7주 - Creating Types from Types  
-> 8주 - Creating Types from Types  
+> [0주 - 오프라인 모임 ✔️](./week00/)  
+> [1주 - The TypeScript Handbook ✔️](./week01/)  
+> [2주 - The Basics ✔️](./week02/)  
+> [3주 - Everyday Types ✔️](./week03/)  
+> [4주 - Narrowing ✔️](./week04/)  
+> [5주 - More on Functions ✔️](./week05/)  
+> [6주 - Object Types ✔️](./week06/)  
+> [7주 - 오프라인 모임 ✔️](./week00/)  
+> [8주 - Creating Types from Types: Generics ✔️](./week08/)  
 > 9주 - Creating Types from Types  
-> 10주 - Creating Types from Types  
-> 11주 - Creating Types from Types  
-> 12주 - Creating Types from Types  
-> 13주 - Creating Types from Types  
-> 14주 - Classes  
-> 15주 - Classes  
-> 16주 - Modules  
+> 10주 - Classes  
+> 11주 - Modules  
 
 </details>
 
