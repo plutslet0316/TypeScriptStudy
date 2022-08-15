@@ -49,8 +49,8 @@
 > [7주 - 오프라인 모임 ✔️](./week00/)  
 > [8주 - Creating Types from Types: Generics ✔️](./week08/)  
 > 9주 - Creating Types from Types  
-> 10주 - Classes  
-> 11주 - Modules  
+> 10주 - Modules  
+> 11주 - Classes  
 
 </details>
 
