@@ -46,9 +46,9 @@
 > [4주 - Narrowing ✔️](./week04/)  
 > [5주 - More on Functions ✔️](./week05/)  
 > [6주 - Object Types ✔️](./week06/)  
-> [7주 - 오프라인 모임 ✔️](./week00/)  
+> [7주 - 오프라인 모임 ✔️](./week00/bounced_ball/)  
 > [8주 - Creating Types from Types: Generics ✔️](./week08/)  
-> 9주 - Creating Types from Types  
+> [9주 - Creating Types from Types ✔️](./week09/)  
 > 10주 - Modules  
 > 11주 - Classes  
 
