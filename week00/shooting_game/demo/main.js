@@ -1,9 +1,21 @@
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 var total;
+var xRatio;
+var yRatio;
 var DrawingApp = /** @class */ (function () {
     function DrawingApp(canvas, fps) {
         if (fps === void 0) { fps = 60; }
         var _this = this;
-        this.actors = [];
+        this.backActors = [];
+        this.frontActors = [];
         this.enemys = [];
         this.bossEnemy = [];
         this.attackInterval = 100;
@@ -49,9 +61,12 @@ var DrawingApp = /** @class */ (function () {
             _this.context.fillStyle = "black";
             _this.context.fillRect(0, 0, _this.canvas.width, _this.canvas.height);
             // 환경에 맞게 계산
-            _this.drawLoop(_this.actors);
+            _this.drawLoop(_this.backActors);
             _this.drawLoop(_this.enemys);
             _this.drawLoop(_this.bossEnemy);
+            _this.drawLoop(_this.frontActors);
+            _this.animLoop(timestamp, _this.charator);
+            _this.animLoop.apply(_this, __spreadArray([timestamp], _this.enemys.concat(_this.bossEnemy), false));
             // 적 제거
             deleteObjet(_this.enemys, "isDelete");
             deleteObjet(_this.bossEnemy, "isDelete");
@@ -70,12 +85,15 @@ var DrawingApp = /** @class */ (function () {
              {
                 _this.then = timestamp - (elapsed % _this.fpsInterval);
                 // 엑터 계산
-                _this.calcLoop(_this.actors);
+                _this.calcLoop(_this.backActors);
                 _this.calcLoop(_this.enemys);
                 _this.calcLoop(_this.bossEnemy);
+                _this.calcLoop(_this.frontActors);
                 // 데미지 계산
-                _this.damegedCheck(_this.charator.bullets, _this.enemys);
-                _this.damegedCheck(_this.charator.bullets, _this.bossEnemy);
+                _this.damagedCheck(_this.charator.bullets, _this.enemys);
+                _this.damagedCheck(_this.charator.bullets, _this.bossEnemy);
+                _this.damagedCheck([_this.charator,], _this.enemys, true);
+                _this.damagedCheck([_this.charator,], _this.bossEnemy, true);
             }
             // 공격
             var attackElapsed = timestamp - _this.attackDelay;
@@ -83,22 +101,24 @@ var DrawingApp = /** @class */ (function () {
                 _this.attackDelay = timestamp - (attackElapsed % _this.attackInterval);
                 _this.attackLoop(_this.charator, _this.input.isAttack);
             }
-            // 보스 소환
-            if (!_this.boss && total >= 50) {
+            // 보스 소환 / 50점마다 한 번씩 소환
+            if (!_this.boss && total / 50 >= _this.bossCount + 1) {
                 _this.isBoss = true;
+                _this.bossCount++;
             }
             if (_this.isBoss && !_this.boss) {
                 _this.boss = true;
-                _this.bossEnemy.push(new EnemeActor(_this.drawContext, "assets/RFly1.png", 0.5, 200, 2));
+                _this.bossEnemy.push(new EnemeActor(_this.drawContext, { "rfly1": "assets/RFly1.png", "rfly2": "assets/RFly2.png" }, 0.5, 200, 5, 2));
             }
             if (_this.bossEnemy.length == 0) {
                 _this.isBoss = false;
+                _this.boss = false;
             }
-            // 적 소환
+            // 적 소환 / 보스 있으면 소환 중지
             if (!_this.isBoss) {
                 var enemyElapsed = timestamp - _this.enemyDelay;
                 if (enemyElapsed >= _this.enemyInterval) {
-                    _this.enemys.push(new EnemeActor(_this.drawContext, "assets/RFly1.png", 5, 5));
+                    _this.enemys.push(new EnemeActor(_this.drawContext, { "rfly1": "assets/RFly1.png", "rfly2": "assets/RFly2.png" }, 5, 5));
                     _this.enemyDelay = timestamp - (enemyElapsed % _this.enemyInterval);
                     _this.enemyInterval = (2500 * Math.random());
                 }
@@ -108,10 +128,15 @@ var DrawingApp = /** @class */ (function () {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
         this.fpsInterval = 1000 / fps;
-        this.enemyInterval = 5000 * Math.random();
-        this.enemyDelay = 5000;
+        this.enemyInterval = 5000;
+        this.enemyDelay = 0;
         this.boss = false;
         this.isBoss = false;
+        canvas.style.cursor = 'none';
+        this.bossCount = 0;
+        xRatio = 1280 / this.canvas.clientWidth;
+        yRatio = 720 / this.canvas.clientHeight;
+        //console.log(xRatio, yRatio);
         this.input = {
             xSpeed: 0,
             ySpeed: 0,
@@ -128,7 +153,8 @@ var DrawingApp = /** @class */ (function () {
         window.addEventListener("keyup", function (e) { _this.keys[e.key] = false; }, false);
         // 마우스 & 터치 움직임 감지
         var moveEvent = function (e) {
-            console.log(_this.touchPos);
+            xRatio = 1280 / _this.canvas.clientWidth;
+            yRatio = 720 / _this.canvas.clientHeight;
             if (e instanceof MouseEvent) {
                 _this.touchPos.x = e.clientX;
                 _this.touchPos.y = e.clientY;
@@ -137,6 +163,8 @@ var DrawingApp = /** @class */ (function () {
                 _this.touchPos.x = e.changedTouches[0].clientX;
                 _this.touchPos.y = e.changedTouches[0].clientY;
             }
+            _this.touchPos.x *= xRatio;
+            _this.touchPos.y *= yRatio;
         };
         // 마우스 공격
         canvas.addEventListener("mousedown", function (e) { _this.keys["Z"] = true; }, false);
@@ -149,15 +177,16 @@ var DrawingApp = /** @class */ (function () {
         canvas.addEventListener("touchstart", function (e) { _this.keys["Z"] = true; }, false);
         canvas.addEventListener("touchmove", moveEvent, false);
         canvas.addEventListener("touchend", function (e) { _this.keys["Z"] = false; _this.touchPos.x = 0; _this.touchPos.y = 0; }, false);
-        this.charator = new CharacterActor(drawContext, { "origin": "assets/Fly1.png", "attack": "assets/Bullet.png" }, 10);
+        // 엑터 생성
+        this.charator = new CharacterActor(drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
         this.score = new ScoreActor(drawContext);
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back1.png", 0.4));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back2.png", 0.8));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back3.png", 1.5));
-        this.actors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 10));
-        this.actors.push(this.charator);
-        this.actors.push(this.score);
-        this.actors.push(new FadeInActor(this.drawContext));
+        this.backActors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 6));
+        this.frontActors.push(this.charator);
+        this.frontActors.push(this.score);
+        this.frontActors.push(new FadeInActor(this.drawContext));
         // this.actors.push(new TitleTextActor(drawContext, "TypeScript Study"));
         requestAnimationFrame(this.update);
     }
@@ -173,19 +202,32 @@ var DrawingApp = /** @class */ (function () {
             actor.calc(this.input.xSpeed, this.input.ySpeed, this.touchPos.x, this.touchPos.y); // 매개변수가 필요하면 알아서 가져다 씀
         }
     };
+    DrawingApp.prototype.animLoop = function (timestamp) {
+        var actors = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            actors[_i - 1] = arguments[_i];
+        }
+        for (var _a = 0, actors_3 = actors; _a < actors_3.length; _a++) {
+            var actor = actors_3[_a];
+            actor.anim(timestamp);
+        }
+    };
     DrawingApp.prototype.attackLoop = function (actor, isAttack) {
         actor.attack(isAttack);
     };
-    DrawingApp.prototype.damegedCheck = function (selfs, targets) {
+    // this.damagedCheck([this.charator], this.bossEnemy)
+    DrawingApp.prototype.damagedCheck = function (selfs, targets, isOnlyTarget) {
+        if (isOnlyTarget === void 0) { isOnlyTarget = false; }
         for (var _i = 0, targets_1 = targets; _i < targets_1.length; _i++) {
             var target = targets_1[_i];
             for (var _a = 0, selfs_1 = selfs; _a < selfs_1.length; _a++) {
                 var self_1 = selfs_1[_a];
-                target.demage(self_1.x, self_1.y);
-                self_1.demage(target.x, target.y, target.image.width, target.image.height, target.ratio == undefined ? 1 : target.ratio);
+                self_1.damaged((self_1.x + self_1.image.width <= target.x || self_1.x >= target.x + target.image.width), (self_1.y + self_1.image.height <= target.y || self_1.y >= target.y + target.image.height), target.damage ? target.damage : 1);
+                if (isOnlyTarget)
+                    continue;
+                target.damaged((target.x + target.image.width <= self_1.x || target.x >= self_1.x + self_1.image.width), (target.y + target.image.height <= self_1.y || target.y >= self_1.y + self_1.image.height), self_1.damage ? self_1.damage : 1);
             }
         }
-        return total;
     };
     return DrawingApp;
 }());
@@ -270,39 +312,45 @@ var ScrolledBackActor = /** @class */ (function () {
     return ScrolledBackActor;
 }());
 var EnemeActor = /** @class */ (function () {
-    function EnemeActor(context, imageFilename, speed, maxHealth, ratio) {
+    function EnemeActor(context, imageFileNames, speed, maxHealth, score, ratio) {
+        if (score === void 0) { score = 1; }
         if (ratio === void 0) { ratio = 1; }
         var _this = this;
-        this.demage = function (x, y) {
-            var xCheck = _this.x - (_this.image.width * 1.5 / _this.ratio) <= x && x <= _this.x + (_this.image.width / 2 / _this.ratio);
-            var yCheck = _this.y - (_this.image.height / 2 / _this.ratio) <= y && y <= _this.y + (_this.image.height / 2);
-            if (xCheck && yCheck) {
-                _this.health--;
+        this.damaged = function (xCheck, yCheck, damage) {
+            if (!(xCheck || yCheck)) {
+                _this.health -= damage;
             }
             if (_this.health <= 0) {
                 _this.isDelete = true;
                 if (!_this.isScore) {
-                    total += 1;
+                    total += _this.score;
                     _this.isScore = true;
                 }
             }
             return 0;
+        };
+        this.anim = function (timestamp) {
+            var no = (Math.round(timestamp / 50) % 2) + 1;
+            _this.image.src = _this.imageFileNames["rfly".concat(no)];
         };
         this.context = context;
         this.speed = speed;
         this.ratio = ratio;
         this.maxHealth = maxHealth;
         this.health = this.maxHealth;
+        this.score = score;
         this.isDelete = false;
+        this.imageFileNames = imageFileNames;
+        this.startTime = Date.now();
         this.image = new Image();
-        this.image.src = imageFilename;
+        this.image.src = imageFileNames["rfly1"];
         this.setup();
     }
     EnemeActor.prototype.setup = function () {
         this.image.width = (this.image.naturalWidth / 4) * this.ratio;
         this.image.height = (this.image.naturalHeight / 4) * this.ratio;
         this.x = this.context.width;
-        this.y = (this.context.height - this.image.height) * Math.random();
+        this.y = (this.context.height - this.image.height - 200) * Math.random() + 100;
     };
     EnemeActor.prototype.draw = function () {
         if (this.image.width == 0) {
@@ -329,15 +377,46 @@ var EnemeActor = /** @class */ (function () {
     return EnemeActor;
 }());
 var CharacterActor = /** @class */ (function () {
-    function CharacterActor(context, imageFilenames, speed) {
+    function CharacterActor(context, imageFileNames, speed) {
+        var _this = this;
+        this.damaged = function (xCheck, yCheck, damage) {
+            var timestamp = Date.now() - _this.then;
+            var damageElapsed = timestamp - _this.damageDelay;
+            if (damageElapsed > _this.damageInterval) {
+                _this.isDamaged = false;
+            }
+            if (!(xCheck || yCheck)) {
+                while (damageElapsed > _this.damageInterval) {
+                    damageElapsed -= _this.damageInterval;
+                    _this.damageDelay = 1000;
+                    _this.then = Date.now();
+                }
+                if (!_this.isDamaged) {
+                    _this.health -= damage;
+                    _this.isDamaged = true;
+                    // console.log(this.health);
+                }
+            }
+        };
+        this.anim = function (timestamp) {
+            var no = (Math.round(timestamp / 50) % 2) + 1;
+            _this.image.src = _this.imageFileNames["fly".concat(no)];
+        };
         this.context = context;
-        this.imageFilenames = imageFilenames;
+        this.imageFileNames = imageFileNames;
+        this.maxHealth = 10;
+        this.health = this.maxHealth;
         this.speed = speed;
         this.image = new Image();
-        this.image.src = this.imageFilenames["origin"];
+        this.image.src = this.imageFileNames["fly1"];
         this.bullets = [];
         this.bulletImage = new Image();
-        this.bulletImage.src = this.imageFilenames["attack"];
+        this.bulletImage.src = this.imageFileNames["attack"];
+        this.damageDelay = 1000;
+        this.damageInterval = 1000;
+        this.start = Date.now();
+        this.then = this.start;
+        this.isDamaged = false;
         this.setup();
     }
     CharacterActor.prototype.setup = function () {
@@ -349,21 +428,32 @@ var CharacterActor = /** @class */ (function () {
         this.y = this.context.height / 2;
     };
     CharacterActor.prototype.draw = function () {
+        var c = this.context.crc;
+        var widht = 0;
+        var height = this.context.height - 60;
         if (this.image.width == 0) {
             this.setup();
         }
         if (this.bulletImage.width == 0) {
             this.setup();
         }
-        var c = this.context.crc;
         c.drawImage(this.image, this.x, this.y, this.image.width, this.image.height);
-        // console.log(this.score);
         if (this.bullets.length != 0) {
             for (var _i = 0, _a = this.bullets; _i < _a.length; _i++) {
                 var bullet = _a[_i];
-                c.drawImage(bullet.image, bullet.x + this.image.width, bullet.y + this.image.height / 2, bullet.image.width, bullet.image.height);
+                c.drawImage(bullet.image, bullet.x, bullet.y, bullet.image.width, bullet.image.height);
             }
         }
+        c.fillStyle = "purple";
+        c.fillRect(widht, height, 400, 60);
+        c.font = "bold 24px serif";
+        c.fillStyle = "white";
+        c.textAlign = "right";
+        c.fillText("체력", widht + 64, height + 40);
+        c.fillStyle = "black";
+        c.fillRect(widht + 80, height + 10, 300, 40);
+        c.fillStyle = "#ff4444";
+        c.fillRect(widht + 80, height + 10, 300 * (this.health / this.maxHealth), 40);
     };
     CharacterActor.prototype.calc = function (xSpeed, ySpeed, xPos, yPos) {
         if (xPos)
@@ -401,26 +491,35 @@ var CharacterActor = /** @class */ (function () {
     };
     CharacterActor.prototype.attack = function (isAttack) {
         if (isAttack) {
-            this.bullets.push(new BulletActor(this.bulletImage, 20, this.x, this.y));
+            this.bullets.push(new BulletActor(this.bulletImage, 20, 1, this.x + this.image.width, this.y + this.image.height / 2));
         }
-    };
-    CharacterActor.prototype.demage = function (x, y, xLimit, yLimit) {
     };
     return CharacterActor;
 }());
+// 이걸 사용하면 동시에 처리할 수 있지만, 깜빡이는 현상이 발생한다.
+/*
+const animActer = {
+    start: Date.now(),
+    anim: (imageFileNames: ImageFileNames, name: string, delay: number, start: number) => {
+        let timestamp = Date.now() - start
+        let no = (Math.round(timestamp / delay) % 2) + 1;
+        return imageFileNames[`${name}${no}`];
+    },
+
+}
+*/
 var BulletActor = /** @class */ (function () {
-    function BulletActor(image, speed, x, y) {
+    function BulletActor(image, speed, damage, x, y) {
         var _this = this;
-        this.demage = function (x, y, xLimit, yLimit, ratio) {
-            var xCheck = _this.x - (xLimit / 2 / ratio) <= x && x <= _this.x + (xLimit * 1.5 / ratio);
-            var yCheck = _this.y - (yLimit / 2) <= y && y <= _this.y + (yLimit / 2 / ratio);
-            if (xCheck && yCheck) {
+        this.damaged = function (xCheck, yCheck, damage) {
+            if (!(xCheck || yCheck)) {
                 // console.log("총알")
                 _this.isDelete = true;
             }
         };
         this.image = image;
         this.speed = speed;
+        this.damage = damage;
         this.x = x;
         this.y = y;
         this.isDelete = false;

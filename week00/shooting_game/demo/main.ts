@@ -1,9 +1,12 @@
 let total: number;
+let xRatio: number;
+let yRatio: number;
 
 class DrawingApp {
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
-    private readonly actors: IActor[] = [];
+    private readonly backActors: IActor[] = [];
+    private readonly frontActors: IActor[] = [];
     private readonly drawContext;
     private readonly fpsInterval: number;
     private enemys: IEneme[] = [];
@@ -15,6 +18,7 @@ class DrawingApp {
     private isBoss: boolean;
     private boss: boolean;
 
+    private bossCount: number;
     private start: number;
     private then: number;
 
@@ -22,17 +26,25 @@ class DrawingApp {
     private enemyDelay: number;
 
     private keys: Keys = {};
-    private touchPos: TouchPos =  { x: 0, y: 0 };
+    private touchPos: TouchPos = { x: 0, y: 0 };
     private input: Input;
 
     constructor(canvas: HTMLCanvasElement, fps = 60) {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
         this.fpsInterval = 1000 / fps;
-        this.enemyInterval = 5000 * Math.random();
-        this.enemyDelay = 5000;
+        this.enemyInterval = 5000;
+        this.enemyDelay = 0;
         this.boss = false;
         this.isBoss = false;
+        canvas.style.cursor = 'none';
+
+        this.bossCount = 0;
+
+        xRatio = 1280 / this.canvas.clientWidth;
+        yRatio = 720 / this.canvas.clientHeight;
+
+        //console.log(xRatio, yRatio);
 
         this.input = {
             xSpeed: 0,
@@ -55,15 +67,20 @@ class DrawingApp {
 
         // 마우스 & 터치 움직임 감지
         const moveEvent = (e: MouseEvent | TouchEvent) => {
-            console.log(this.touchPos)
-            if(e instanceof MouseEvent) {
+            xRatio = 1280 / this.canvas.clientWidth;
+            yRatio = 720 / this.canvas.clientHeight;
+
+            if (e instanceof MouseEvent) {
                 this.touchPos.x = e.clientX
                 this.touchPos.y = e.clientY
             }
-            else if(e instanceof TouchEvent){
+            else if (e instanceof TouchEvent) {
                 this.touchPos.x = e.changedTouches[0].clientX
                 this.touchPos.y = e.changedTouches[0].clientY
             }
+
+            this.touchPos.x *= xRatio;
+            this.touchPos.y *= yRatio;
         }
 
         // 마우스 공격
@@ -72,26 +89,27 @@ class DrawingApp {
 
         // 마우스 움직임
         canvas.addEventListener("mousemove", moveEvent, false);
-        canvas.addEventListener("mouseenter",moveEvent, false);
-        canvas.addEventListener("mouseleave", (e: MouseEvent) => { this.touchPos.x = 0; this.touchPos.y = 0}, false);
+        canvas.addEventListener("mouseenter", moveEvent, false);
+        canvas.addEventListener("mouseleave", (e: MouseEvent) => { this.touchPos.x = 0; this.touchPos.y = 0 }, false);
 
 
         // 터치시 공격 & 움직임
         canvas.addEventListener("touchstart", (e: TouchEvent) => { this.keys["Z"] = true; }, false);
         canvas.addEventListener("touchmove", moveEvent, false)
-        canvas.addEventListener("touchend", (e: TouchEvent) => { this.keys["Z"] = false; this.touchPos.x = 0; this.touchPos.y = 0}, false);
+        canvas.addEventListener("touchend", (e: TouchEvent) => { this.keys["Z"] = false; this.touchPos.x = 0; this.touchPos.y = 0 }, false);
 
 
-        this.charator = new CharacterActor(drawContext, { "origin": "assets/Fly1.png", "attack": "assets/Bullet.png" }, 10);
+        // 엑터 생성
+        this.charator = new CharacterActor(drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
         this.score = new ScoreActor(drawContext);
 
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back1.png", 0.4));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back2.png", 0.8));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back3.png", 1.5));
-        this.actors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 10));
-        this.actors.push(this.charator);
-        this.actors.push(this.score);
-        this.actors.push(new FadeInActor(this.drawContext));
+        this.backActors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 6));
+        this.frontActors.push(this.charator);
+        this.frontActors.push(this.score);
+        this.frontActors.push(new FadeInActor(this.drawContext));
         // this.actors.push(new TitleTextActor(drawContext, "TypeScript Study"));
 
         requestAnimationFrame(this.update);
@@ -138,9 +156,12 @@ class DrawingApp {
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // 환경에 맞게 계산
-        this.drawLoop(this.actors);
+        this.drawLoop(this.backActors);
         this.drawLoop(this.enemys);
         this.drawLoop(this.bossEnemy);
+        this.drawLoop(this.frontActors);
+        this.animLoop(timestamp, this.charator)
+        this.animLoop(timestamp, ...this.enemys.concat(this.bossEnemy));
 
         // 적 제거
         deleteObjet(this.enemys, "isDelete");
@@ -164,14 +185,16 @@ class DrawingApp {
             this.then = timestamp - (elapsed % this.fpsInterval);
 
             // 엑터 계산
-            this.calcLoop(this.actors);
+            this.calcLoop(this.backActors);
             this.calcLoop(this.enemys);
             this.calcLoop(this.bossEnemy);
-
+            this.calcLoop(this.frontActors);
 
             // 데미지 계산
-            this.damegedCheck(this.charator.bullets, this.enemys)
-            this.damegedCheck(this.charator.bullets, this.bossEnemy)
+            this.damagedCheck(this.charator.bullets, this.enemys);
+            this.damagedCheck(this.charator.bullets, this.bossEnemy);
+            this.damagedCheck([this.charator,], this.enemys, true);
+            this.damagedCheck([this.charator,], this.bossEnemy, true);
         }
 
         // 공격
@@ -182,25 +205,27 @@ class DrawingApp {
             this.attackLoop(this.charator, this.input.isAttack);
         }
 
-        // 보스 소환
-        if (!this.boss && total >= 50) {
+        // 보스 소환 / 50점마다 한 번씩 소환
+        if (!this.boss && total / 50 >= this.bossCount + 1) {
             this.isBoss = true;
+            this.bossCount++;
         }
 
         if (this.isBoss && !this.boss) {
             this.boss = true;
-            this.bossEnemy.push(new EnemeActor(this.drawContext, "assets/RFly1.png", 0.5, 200, 2));
+            this.bossEnemy.push(new EnemeActor(this.drawContext, { "rfly1": "assets/RFly1.png", "rfly2": "assets/RFly2.png" }, 0.5, 200, 5, 2));
         }
 
         if (this.bossEnemy.length == 0) {
             this.isBoss = false
+            this.boss = false;
         }
 
-        // 적 소환
+        // 적 소환 / 보스 있으면 소환 중지
         if (!this.isBoss) {
             let enemyElapsed = timestamp - this.enemyDelay;
             if (enemyElapsed >= this.enemyInterval) {
-                this.enemys.push(new EnemeActor(this.drawContext, "assets/RFly1.png", 5, 5));
+                this.enemys.push(new EnemeActor(this.drawContext, { "rfly1": "assets/RFly1.png", "rfly2": "assets/RFly2.png" }, 5, 5));
 
                 this.enemyDelay = timestamp - (enemyElapsed % this.enemyInterval);
                 this.enemyInterval = (2500 * Math.random());
@@ -222,23 +247,40 @@ class DrawingApp {
         }
     }
 
+    private animLoop(timestamp: number, ...actors: IAnimatable[]) {
+        for (const actor of actors) {
+            actor.anim(timestamp)
+        }
+    }
+
     private attackLoop(actor: isAttackable, isAttack: boolean) {
         actor.attack(isAttack);
     }
+    // this.damagedCheck([this.charator], this.bossEnemy)
 
-    private damegedCheck<Self extends ImageXY & { demage: Demaged}, Target extends  ImageXY & { demage: Demaged, ratio?: number}>
-        (selfs: Self[], targets: Target[]): number
-    {
+
+    private damagedCheck(selfs: DamageCheckType[], targets: DamageCheckType[], isOnlyTarget = false) {
         for (const target of targets) {
             for (const self of selfs) {
-                target.demage(self.x, self.y)
-                self.demage(target.x, target.y, target.image.width, target.image.height, target.ratio == undefined ? 1 : target.ratio)
+                self.damaged(
+                    (self.x + self.image.width <= target.x || self.x >= target.x + target.image.width),
+                    (self.y + self.image.height <= target.y || self.y >= target.y + target.image.height),
+                    target.damage ? target.damage : 1)
+                if (isOnlyTarget) continue;
+                target.damaged(
+                    (target.x + target.image.width <= self.x || target.x >= self.x + self.image.width),
+                    (target.y + target.image.height <= self.y || target.y >= self.y + self.image.height),
+                    self.damage ? self.damage : 1)
             }
         }
-        return total;
     }
 }
 
+type DamageCheckType = ImageXY & {
+    damaged: Damaged,
+    damage?: number,
+    ratio?: number
+}
 
 interface IActor {
     draw();
@@ -248,7 +290,10 @@ interface IActor {
 interface isAttackable extends IActor {
     health: number;
     attack(isAttack: boolean);
-    demage: Demaged;
+    damaged: Damaged;
+}
+interface IAnimatable {
+    anim: (timestamp: number) => void;
 }
 
 interface IShootable {
@@ -259,12 +304,12 @@ interface IDeleteable extends ImageXY {
     isDelete: boolean;
 }
 
-interface ICharacter extends isAttackable, IShootable {
-    
+interface ICharacter extends IAnimatable, isAttackable, IShootable, IDeleteable {
+
 }
 
-interface IEneme extends isAttackable, IDeleteable {
-
+interface IEneme extends IAnimatable, isAttackable, IDeleteable {
+    score: number;
 }
 
 interface IScore extends IActor {
@@ -385,26 +430,36 @@ class ScrolledBackActor implements IActor {
 class EnemeActor implements IEneme {
     private readonly context: DrawingContext;
     private readonly speed: number;
-    private ratio;
+    private readonly ratio;
+
+    public score: number;
+
     private maxHealth: number;
     public health: number;
-    public x: number;
-    public y: number;
+
+    private imageFileNames: ImageFileNames;
+    public image: HTMLImageElement;
+
+    public startTime: number;
+
     public isDelete: boolean;
     private isScore: boolean;
 
-    public image: HTMLImageElement;
+    public x: number;
+    public y: number;
 
-    constructor(context: DrawingContext, imageFilename: string, speed: number, maxHealth: number, ratio = 1) {
+    constructor(context: DrawingContext, imageFileNames: ImageFileNames, speed: number, maxHealth: number, score = 1, ratio = 1) {
         this.context = context;
         this.speed = speed;
         this.ratio = ratio;
         this.maxHealth = maxHealth;
         this.health = this.maxHealth;
+        this.score = score;
         this.isDelete = false;
-
+        this.imageFileNames = imageFileNames;
+        this.startTime = Date.now();
         this.image = new Image();
-        this.image.src = imageFilename;
+        this.image.src = imageFileNames["rfly1"];
 
         this.setup();
     }
@@ -414,7 +469,7 @@ class EnemeActor implements IEneme {
         this.image.height = (this.image.naturalHeight / 4) * this.ratio;
 
         this.x = this.context.width;
-        this.y = (this.context.height - this.image.height) * Math.random();
+        this.y = (this.context.height - this.image.height - 200) * Math.random() + 100;
     }
 
     public draw() {
@@ -446,50 +501,74 @@ class EnemeActor implements IEneme {
     public attack(isAttack: boolean) {
 
     }
-    public demage = (x: number, y: number) => {
-        let xCheck = this.x - (this.image.width * 1.5 / this.ratio) <= x && x <= this.x + (this.image.width / 2 / this.ratio);
-        let yCheck = this.y - (this.image.height / 2 / this.ratio) <= y && y <= this.y + (this.image.height / 2);
-
-        if (xCheck && yCheck) {
-            this.health--
+    public damaged = (xCheck: boolean, yCheck: boolean, damage: number) => {
+        if (!(xCheck || yCheck)) {
+            this.health -= damage;
         }
 
         if (this.health <= 0) {
             this.isDelete = true;
-            
-            if(!this.isScore) {
-                total += 1;
+
+            if (!this.isScore) {
+                total += this.score;
                 this.isScore = true;
             }
         }
         return 0;
+    }
+
+    public anim = (timestamp: number) => {
+        let no = (Math.round(timestamp / 50) % 2) + 1;
+        this.image.src = this.imageFileNames[`rfly${no}`];
     }
 }
 
 class CharacterActor implements ICharacter {
     private readonly context: DrawingContext;
     private readonly speed: number;
-    private readonly image: HTMLImageElement;
-    private readonly imageFilenames: ImageFileNames;
+    private readonly imageFileNames: ImageFileNames;
+
+    public readonly image: HTMLImageElement;
     private readonly bulletImage: HTMLImageElement;
 
+    private maxHealth: number;
     public health: number;
+
     public bullets: Bullet[];
+    private damageDelay: number;
+    private damageInterval: number;
+    private start: number;
+    private then: number;
 
-    private x: number;
-    private y: number;
+    public isDelete: boolean;
 
-    constructor(context: DrawingContext, imageFilenames: ImageFileNames, speed: number) {
+    public x: number;
+    public y: number;
+
+    private isDamaged: boolean;
+
+    constructor(context: DrawingContext, imageFileNames: ImageFileNames, speed: number) {
         this.context = context;
-        this.imageFilenames = imageFilenames;
+        this.imageFileNames = imageFileNames;
+
+        this.maxHealth = 10;
+        this.health = this.maxHealth;
         this.speed = speed;
 
         this.image = new Image();
-        this.image.src = this.imageFilenames["origin"];
+        this.image.src = this.imageFileNames["fly1"];
 
         this.bullets = [];
         this.bulletImage = new Image()
-        this.bulletImage.src = this.imageFilenames["attack"]
+        this.bulletImage.src = this.imageFileNames["attack"]
+
+        this.damageDelay = 1000;
+        this.damageInterval = 1000;
+
+        this.start = Date.now();
+        this.then = this.start;
+
+        this.isDamaged = false;
 
         this.setup();
     }
@@ -506,6 +585,9 @@ class CharacterActor implements ICharacter {
     }
 
     public draw() {
+        const c = this.context.crc;
+        const widht = 0;
+        const height = this.context.height - 60
         if (this.image.width == 0) {
             this.setup()
         }
@@ -514,16 +596,27 @@ class CharacterActor implements ICharacter {
             this.setup()
         }
 
-        const c = this.context.crc;
-
         c.drawImage(this.image, this.x, this.y, this.image.width, this.image.height);
 
-        // console.log(this.score);
         if (this.bullets.length != 0) {
             for (const bullet of this.bullets) {
-                c.drawImage(bullet.image, bullet.x + this.image.width, bullet.y + this.image.height / 2, bullet.image.width, bullet.image.height);
+                c.drawImage(bullet.image, bullet.x, bullet.y, bullet.image.width, bullet.image.height);
             }
         }
+
+        c.fillStyle = "purple";
+        c.fillRect(widht, height, 400, 60)
+
+        c.font = "bold 24px serif";
+        c.fillStyle = "white";
+        c.textAlign = "right";
+        c.fillText("체력", widht + 64, height + 40);
+
+        c.fillStyle = "black";
+        c.fillRect(widht + 80, height + 10, 300, 40)
+
+        c.fillStyle = "#ff4444";
+        c.fillRect(widht + 80, height + 10, 300 * (this.health / this.maxHealth), 40)
     }
 
     public calc(xSpeed: number, ySpeed: number, xPos: number, yPos: number) {
@@ -561,34 +654,69 @@ class CharacterActor implements ICharacter {
 
     public attack(isAttack: boolean) {
         if (isAttack) {
-            this.bullets.push(new BulletActor(this.bulletImage, 20, this.x, this.y));
+            this.bullets.push(new BulletActor(this.bulletImage, 20, 1, this.x + this.image.width, this.y + this.image.height / 2));
         }
     }
 
-    public demage(x: number, y: number, xLimit: number, yLimit: number) {
+    public damaged = (xCheck: boolean, yCheck: boolean, damage: number) => {
+        let timestamp = Date.now() - this.then
+        let damageElapsed = timestamp - this.damageDelay
 
+        if (damageElapsed > this.damageInterval) {
+            this.isDamaged = false;
+        }
+
+        if (!(xCheck || yCheck)) {
+            while (damageElapsed > this.damageInterval) {
+                damageElapsed -= this.damageInterval;
+                this.damageDelay = 1000;
+                this.then = Date.now();
+            }
+            if (!this.isDamaged) {
+                this.health -= damage;
+                this.isDamaged = true;
+                // console.log(this.health);
+            }
+        }
+    }
+
+    public anim = (timestamp: number) => {
+        let no = (Math.round(timestamp / 50) % 2) + 1;
+        this.image.src = this.imageFileNames[`fly${no}`];
     }
 }
 
+// 이걸 사용하면 동시에 처리할 수 있지만, 깜빡이는 현상이 발생한다.
+/*
+const animActer = {
+    start: Date.now(),
+    anim: (imageFileNames: ImageFileNames, name: string, delay: number, start: number) => {
+        let timestamp = Date.now() - start
+        let no = (Math.round(timestamp / delay) % 2) + 1;
+        return imageFileNames[`${name}${no}`];
+    },
+
+}
+*/
 class BulletActor implements Bullet {
     public image: HTMLImageElement;
     public speed: number;
+    public damage: number;
     public x: number;
     public y: number;
     public isDelete: boolean;
 
-    constructor(image: HTMLImageElement, speed: number, x: number, y: number) {
+    constructor(image: HTMLImageElement, speed: number, damage: number, x: number, y: number) {
         this.image = image;
         this.speed = speed;
+        this.damage = damage
         this.x = x;
         this.y = y;
         this.isDelete = false;
     }
 
-    public demage = (x: number, y: number, xLimit: number, yLimit: number, ratio: number) => {
-        let xCheck = this.x - (xLimit / 2 / ratio) <= x && x <= this.x + (xLimit * 1.5 / ratio);
-        let yCheck = this.y - (yLimit / 2) <= y && y <= this.y + (yLimit / 2 / ratio);
-        if (xCheck && yCheck) {
+    public damaged = (xCheck: boolean, yCheck: boolean, damage: number) => {
+        if (!(xCheck || yCheck)) {
             // console.log("총알")
             this.isDelete = true;
         }
@@ -639,7 +767,7 @@ class ScoreActor implements IScore {
 }
 
 // 제네릭을 이용해 받은 key가 true이거나 받은 value와 같으면 해당되는 obj를 삭제히는 함수
-function deleteObjet<Type, Key extends keyof Type, Value> (objs: Type[], key: Key, value?: Value) {
+function deleteObjet<Type, Key extends keyof Type, Value>(objs: Type[], key: Key, value?: Value) {
     for (const obj of objs) {
         let check: boolean = !!obj[key];
 
@@ -688,11 +816,14 @@ type ImageXY = {
 
 type Bullet = ImageXY & {
     speed: number;
-    demage: Demaged;
+    damage: number;
+    damaged: Damaged;
     isDelete: boolean;
 }
 
-type Demaged = (x: number, y: number, xLimit?: number, yLimit?: number, ratio?: number) => void | number;
+type Damaged = (
+    xCheck: boolean, yCheck: boolean, damage?: number, timestamp?: number
+) => void | number;
 
 
 type DrawingContext = {
