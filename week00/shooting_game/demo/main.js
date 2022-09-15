@@ -10,6 +10,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
 var total;
 var xRatio;
 var yRatio;
+var isOver;
 var DrawingApp = /** @class */ (function () {
     function DrawingApp(canvas, fps) {
         if (fps === void 0) { fps = 60; }
@@ -20,6 +21,7 @@ var DrawingApp = /** @class */ (function () {
         this.bossEnemy = [];
         this.attackInterval = 100;
         this.attackDelay = 100;
+        this.time = 0;
         this.keys = {};
         this.touchPos = { x: 0, y: 0 };
         // 키 입력
@@ -60,6 +62,7 @@ var DrawingApp = /** @class */ (function () {
         this.update = function (timestamp) {
             _this.context.fillStyle = "black";
             _this.context.fillRect(0, 0, _this.canvas.width, _this.canvas.height);
+            _this.time = timestamp;
             // 환경에 맞게 계산
             _this.drawLoop(_this.backActors);
             _this.drawLoop(_this.enemys);
@@ -78,22 +81,31 @@ var DrawingApp = /** @class */ (function () {
                 _this.then = window.performance.now(); // 이후 변하는 값
                 // console.log(this.start + " " + this.then)
             }
-            // 항상 같은 속도로 계산
-            for (var elapsed = timestamp - _this.then; // 지나간 시간 = 현재 시간 - then 으로 시작
-             elapsed >= _this.fpsInterval; // 지나간 시간이 간격보다 높거나 같아질 때 까지 반복
-             elapsed -= _this.fpsInterval) // 지나간 시간에서 간격만큼 빼고 다시 시작
-             {
-                _this.then = timestamp - (elapsed % _this.fpsInterval);
-                // 엑터 계산
-                _this.calcLoop(_this.backActors);
-                _this.calcLoop(_this.enemys);
-                _this.calcLoop(_this.bossEnemy);
+            if (!isOver) {
+                // 항상 같은 속도로 계산
+                for (var elapsed = timestamp - _this.then; // 지나간 시간 = 현재 시간 - then 으로 시작
+                 elapsed >= _this.fpsInterval; // 지나간 시간이 간격보다 높거나 같아질 때 까지 반복
+                 elapsed -= _this.fpsInterval) // 지나간 시간에서 간격만큼 빼고 다시 시작
+                 {
+                    _this.then = timestamp - (elapsed % _this.fpsInterval);
+                    // 엑터 계산
+                    _this.calcLoop(_this.backActors);
+                    _this.calcLoop(_this.enemys);
+                    _this.calcLoop(_this.bossEnemy);
+                    _this.calcLoop(_this.frontActors);
+                    // 데미지 계산
+                    _this.damagedCheck(_this.charator.bullets, _this.enemys);
+                    _this.damagedCheck(_this.charator.bullets, _this.bossEnemy);
+                    _this.damagedCheck([_this.charator,], _this.enemys, true);
+                    _this.damagedCheck([_this.charator,], _this.bossEnemy, true);
+                    if (_this.charator.health <= 0) {
+                        isOver = true;
+                        _this.frontActors.push(new RetryTextActor(_this.drawContext, ["Game Over", "Press 'R' to retry"]));
+                    }
+                }
+            }
+            else {
                 _this.calcLoop(_this.frontActors);
-                // 데미지 계산
-                _this.damagedCheck(_this.charator.bullets, _this.enemys);
-                _this.damagedCheck(_this.charator.bullets, _this.bossEnemy);
-                _this.damagedCheck([_this.charator,], _this.enemys, true);
-                _this.damagedCheck([_this.charator,], _this.bossEnemy, true);
             }
             // 공격
             var attackElapsed = timestamp - _this.attackDelay;
@@ -128,12 +140,18 @@ var DrawingApp = /** @class */ (function () {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
         this.fpsInterval = 1000 / fps;
-        this.enemyInterval = 5000;
-        this.enemyDelay = 0;
-        this.boss = false;
-        this.isBoss = false;
-        canvas.style.cursor = 'none';
-        this.bossCount = 0;
+        this.drawContext = {
+            width: canvas.width,
+            height: canvas.height,
+            crc: this.context
+        };
+        ;
+        this.init();
+        this.newGame();
+    }
+    DrawingApp.prototype.init = function () {
+        var _this = this;
+        this.canvas.style.cursor = 'none';
         xRatio = 1280 / this.canvas.clientWidth;
         yRatio = 720 / this.canvas.clientHeight;
         //console.log(xRatio, yRatio);
@@ -142,15 +160,11 @@ var DrawingApp = /** @class */ (function () {
             ySpeed: 0,
             isAttack: false,
         };
-        var drawContext = {
-            width: canvas.width,
-            height: canvas.height,
-            crc: this.context
-        };
-        this.drawContext = drawContext;
         // 키보드 누름 & 뗌
         window.addEventListener("keydown", function (e) { _this.keys[e.key] = true; }, false);
         window.addEventListener("keyup", function (e) { _this.keys[e.key] = false; }, false);
+        window.addEventListener("keydown", function (e) { if (e.key == "r" || e.key == "R")
+            _this.newGame(); }, false); // 재시작
         // 마우스 & 터치 움직임 감지
         var moveEvent = function (e) {
             xRatio = 1280 / _this.canvas.clientWidth;
@@ -167,29 +181,44 @@ var DrawingApp = /** @class */ (function () {
             _this.touchPos.y *= yRatio;
         };
         // 마우스 공격
-        canvas.addEventListener("mousedown", function (e) { _this.keys["Z"] = true; }, false);
-        canvas.addEventListener("mouseup", function (e) { _this.keys["Z"] = false; }, false);
+        this.canvas.addEventListener("mousedown", function (e) { _this.keys["Z"] = true; }, false);
+        this.canvas.addEventListener("mouseup", function (e) { _this.keys["Z"] = false; }, false);
         // 마우스 움직임
-        canvas.addEventListener("mousemove", moveEvent, false);
-        canvas.addEventListener("mouseenter", moveEvent, false);
-        canvas.addEventListener("mouseleave", function (e) { _this.touchPos.x = 0; _this.touchPos.y = 0; }, false);
+        this.canvas.addEventListener("mousemove", moveEvent, false);
+        this.canvas.addEventListener("mouseenter", moveEvent, false);
+        this.canvas.addEventListener("mouseleave", function (e) { _this.touchPos.x = 0; _this.touchPos.y = 0; }, false);
         // 터치시 공격 & 움직임
-        canvas.addEventListener("touchstart", function (e) { _this.keys["Z"] = true; }, false);
-        canvas.addEventListener("touchmove", moveEvent, false);
-        canvas.addEventListener("touchend", function (e) { _this.keys["Z"] = false; _this.touchPos.x = 0; _this.touchPos.y = 0; }, false);
+        this.canvas.addEventListener("touchstart", function (e) { _this.keys["Z"] = true; }, false);
+        this.canvas.addEventListener("touchmove", moveEvent, false);
+        this.canvas.addEventListener("touchend", function (e) { _this.keys["Z"] = false; _this.touchPos.x = 0; _this.touchPos.y = 0; }, false);
+    };
+    DrawingApp.prototype.newGame = function () {
+        isOver = false;
+        // 초기화
+        this.charator = null;
+        this.score = null;
+        this.backActors = [];
+        this.frontActors = [];
+        this.enemys = [];
+        this.bossEnemy = [];
+        this.enemyInterval = 5000;
+        this.enemyDelay = this.time;
+        this.boss = false;
+        this.isBoss = false;
+        this.bossCount = 0;
         // 엑터 생성
-        this.charator = new CharacterActor(drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
-        this.score = new ScoreActor(drawContext);
+        this.charator = new CharacterActor(this.drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
+        this.score = new ScoreActor(this.drawContext);
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back1.png", 0.4));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back2.png", 0.8));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back3.png", 1.5));
-        this.backActors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 6));
+        this.backActors.push(new ScrolledBackActor(this.drawContext, "assets/BG.png", 6));
         this.frontActors.push(this.charator);
         this.frontActors.push(this.score);
         this.frontActors.push(new FadeInActor(this.drawContext));
         // this.actors.push(new TitleTextActor(drawContext, "TypeScript Study"));
         requestAnimationFrame(this.update);
-    }
+    };
     DrawingApp.prototype.drawLoop = function (actors) {
         for (var _i = 0, actors_1 = actors; _i < actors_1.length; _i++) {
             var actor = actors_1[_i];
@@ -252,6 +281,32 @@ var TitleTextActor = /** @class */ (function () {
         }
     };
     return TitleTextActor;
+}());
+var RetryTextActor = /** @class */ (function () {
+    function RetryTextActor(context, texts) {
+        this.fade = 0;
+        this.context = context;
+        this.texts = texts;
+    }
+    RetryTextActor.prototype.draw = function () {
+        var c = this.context.crc;
+        c.globalAlpha = this.fade;
+        c.font = "bold 48px serif";
+        c.textAlign = "center";
+        c.fillStyle = "blue";
+        c.fillText(this.texts[0], this.context.width / 2, this.context.height / 2);
+        c.font = "bold 28px serif";
+        c.textAlign = "center";
+        c.fillStyle = "blue";
+        c.fillText(this.texts[1], this.context.width / 2, this.context.height / 2 + 48);
+        c.globalAlpha = 1;
+    };
+    RetryTextActor.prototype.calc = function () {
+        if (this.fade < 0.8) {
+            this.fade += 0.005;
+        }
+    };
+    return RetryTextActor;
 }());
 var FadeInActor = /** @class */ (function () {
     function FadeInActor(context) {
@@ -535,8 +590,12 @@ var ScoreActor = /** @class */ (function () {
         this.width = this.context.width / 10;
         this.height = this.context.height / 10;
     }
-    ScoreActor.prototype.draw = function () {
+    ScoreActor.prototype.getNow = function () {
         this.then = new Date();
+    };
+    ScoreActor.prototype.draw = function () {
+        if (!isOver)
+            this.getNow();
         var c = this.context.crc;
         var time = new Date(this.then.getTime() - this.start.getTime());
         var text = (time.getMinutes() <= 9 ? "0" : "") + time.getMinutes() + ":" + (time.getSeconds() <= 9 ? "0" : "") + time.getSeconds();

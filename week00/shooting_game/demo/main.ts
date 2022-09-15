@@ -1,18 +1,21 @@
 let total: number;
 let xRatio: number;
 let yRatio: number;
+let isOver: boolean;
 
 class DrawingApp {
     private readonly canvas: HTMLCanvasElement;
     private readonly context: CanvasRenderingContext2D;
-    private readonly backActors: IActor[] = [];
-    private readonly frontActors: IActor[] = [];
     private readonly drawContext;
     private readonly fpsInterval: number;
+
+    private backActors: IActor[] = [];
+    private frontActors: IActor[] = [];
     private enemys: IEneme[] = [];
     private bossEnemy: IEneme[] = [];
     private charator: ICharacter;
     private score: IScore;
+
     private attackInterval: number = 100;
     private attackDelay: number = 100;
     private isBoss: boolean;
@@ -21,6 +24,7 @@ class DrawingApp {
     private bossCount: number;
     private start: number;
     private then: number;
+    private time: number = 0;
 
     private enemyInterval: number;
     private enemyDelay: number;
@@ -29,17 +33,24 @@ class DrawingApp {
     private touchPos: TouchPos = { x: 0, y: 0 };
     private input: Input;
 
+
     constructor(canvas: HTMLCanvasElement, fps = 60) {
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
         this.fpsInterval = 1000 / fps;
-        this.enemyInterval = 5000;
-        this.enemyDelay = 0;
-        this.boss = false;
-        this.isBoss = false;
-        canvas.style.cursor = 'none';
 
-        this.bossCount = 0;
+        this.drawContext = {
+            width: canvas.width,
+            height: canvas.height,
+            crc: this.context
+        };;
+
+        this.init();
+        this.newGame();
+    }
+
+    private init() {
+        this.canvas.style.cursor = 'none';
 
         xRatio = 1280 / this.canvas.clientWidth;
         yRatio = 720 / this.canvas.clientHeight;
@@ -52,17 +63,10 @@ class DrawingApp {
             isAttack: false,
         };
 
-        const drawContext = {
-            width: canvas.width,
-            height: canvas.height,
-            crc: this.context
-        };
-        this.drawContext = drawContext;
-
-
         // 키보드 누름 & 뗌
         window.addEventListener("keydown", (e: KeyboardEvent) => { this.keys[e.key] = true; }, false);
         window.addEventListener("keyup", (e: KeyboardEvent) => { this.keys[e.key] = false; }, false);
+        window.addEventListener("keydown", (e) => { if (e.key == "r" || e.key == "R") this.newGame(); }, false); // 재시작
 
 
         // 마우스 & 터치 움직임 감지
@@ -84,29 +88,46 @@ class DrawingApp {
         }
 
         // 마우스 공격
-        canvas.addEventListener("mousedown", (e: MouseEvent) => { this.keys["Z"] = true; }, false);
-        canvas.addEventListener("mouseup", (e: MouseEvent) => { this.keys["Z"] = false; }, false);
+        this.canvas.addEventListener("mousedown", (e: MouseEvent) => { this.keys["Z"] = true; }, false);
+        this.canvas.addEventListener("mouseup", (e: MouseEvent) => { this.keys["Z"] = false; }, false);
 
         // 마우스 움직임
-        canvas.addEventListener("mousemove", moveEvent, false);
-        canvas.addEventListener("mouseenter", moveEvent, false);
-        canvas.addEventListener("mouseleave", (e: MouseEvent) => { this.touchPos.x = 0; this.touchPos.y = 0 }, false);
+        this.canvas.addEventListener("mousemove", moveEvent, false);
+        this.canvas.addEventListener("mouseenter", moveEvent, false);
+        this.canvas.addEventListener("mouseleave", (e: MouseEvent) => { this.touchPos.x = 0; this.touchPos.y = 0 }, false);
 
 
         // 터치시 공격 & 움직임
-        canvas.addEventListener("touchstart", (e: TouchEvent) => { this.keys["Z"] = true; }, false);
-        canvas.addEventListener("touchmove", moveEvent, false)
-        canvas.addEventListener("touchend", (e: TouchEvent) => { this.keys["Z"] = false; this.touchPos.x = 0; this.touchPos.y = 0 }, false);
+        this.canvas.addEventListener("touchstart", (e: TouchEvent) => { this.keys["Z"] = true; }, false);
+        this.canvas.addEventListener("touchmove", moveEvent, false)
+        this.canvas.addEventListener("touchend", (e: TouchEvent) => { this.keys["Z"] = false; this.touchPos.x = 0; this.touchPos.y = 0 }, false);
+    }
 
+    public newGame() {
+        isOver = false;
+
+        // 초기화
+        this.charator = null;
+        this.score = null;
+        this.backActors = [];
+        this.frontActors = [];
+        this.enemys = [];
+        this.bossEnemy = [];
+
+        this.enemyInterval = 5000;
+        this.enemyDelay = this.time;
+        this.boss = false;
+        this.isBoss = false;
+        this.bossCount = 0;
 
         // 엑터 생성
-        this.charator = new CharacterActor(drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
-        this.score = new ScoreActor(drawContext);
+        this.charator = new CharacterActor(this.drawContext, { "fly1": "assets/Fly1.png", "fly2": "assets/Fly2.png", "attack": "assets/Bullet.png" }, 10);
+        this.score = new ScoreActor(this.drawContext);
 
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back1.png", 0.4));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back2.png", 0.8));
         // this.actors.push(new ScrolledBackActor(drawContext, "assets/back3.png", 1.5));
-        this.backActors.push(new ScrolledBackActor(drawContext, "assets/BG.png", 6));
+        this.backActors.push(new ScrolledBackActor(this.drawContext, "assets/BG.png", 6));
         this.frontActors.push(this.charator);
         this.frontActors.push(this.score);
         this.frontActors.push(new FadeInActor(this.drawContext));
@@ -114,7 +135,6 @@ class DrawingApp {
 
         requestAnimationFrame(this.update);
     }
-
 
     // 키 입력
     private keyInput = () => {
@@ -154,6 +174,7 @@ class DrawingApp {
     private update = (timestamp) => {
         this.context.fillStyle = "black";
         this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.time = timestamp;
 
         // 환경에 맞게 계산
         this.drawLoop(this.backActors);
@@ -177,24 +198,33 @@ class DrawingApp {
             // console.log(this.start + " " + this.then)
         }
 
-        // 항상 같은 속도로 계산
-        for (let elapsed = timestamp - this.then;   // 지나간 시간 = 현재 시간 - then 으로 시작
-            elapsed >= this.fpsInterval;            // 지나간 시간이 간격보다 높거나 같아질 때 까지 반복
-            elapsed -= this.fpsInterval)            // 지나간 시간에서 간격만큼 빼고 다시 시작
-        {
-            this.then = timestamp - (elapsed % this.fpsInterval);
+        if (!isOver) {
+            // 항상 같은 속도로 계산
+            for (let elapsed = timestamp - this.then;   // 지나간 시간 = 현재 시간 - then 으로 시작
+                elapsed >= this.fpsInterval;            // 지나간 시간이 간격보다 높거나 같아질 때 까지 반복
+                elapsed -= this.fpsInterval)            // 지나간 시간에서 간격만큼 빼고 다시 시작
+            {
+                this.then = timestamp - (elapsed % this.fpsInterval);
 
-            // 엑터 계산
-            this.calcLoop(this.backActors);
-            this.calcLoop(this.enemys);
-            this.calcLoop(this.bossEnemy);
+                // 엑터 계산
+                this.calcLoop(this.backActors);
+                this.calcLoop(this.enemys);
+                this.calcLoop(this.bossEnemy);
+                this.calcLoop(this.frontActors);
+
+                // 데미지 계산
+                this.damagedCheck(this.charator.bullets, this.enemys);
+                this.damagedCheck(this.charator.bullets, this.bossEnemy);
+                this.damagedCheck([this.charator,], this.enemys, true);
+                this.damagedCheck([this.charator,], this.bossEnemy, true);
+
+                if (this.charator.health <= 0) {
+                    isOver = true;
+                    this.frontActors.push(new RetryTextActor(this.drawContext, ["Game Over", "Press 'R' to retry"]));
+                }
+            }
+        } else {
             this.calcLoop(this.frontActors);
-
-            // 데미지 계산
-            this.damagedCheck(this.charator.bullets, this.enemys);
-            this.damagedCheck(this.charator.bullets, this.bossEnemy);
-            this.damagedCheck([this.charator,], this.enemys, true);
-            this.damagedCheck([this.charator,], this.bossEnemy, true);
         }
 
         // 공격
@@ -336,6 +366,42 @@ class TitleTextActor implements IActor {
 
         c.globalAlpha = this.fade;
         c.fillText(this.texts, this.context.width / 2, this.context.height / 2);
+        c.globalAlpha = 1;
+    }
+
+    public calc() {
+        if (this.fade < 0.8) {
+            this.fade += 0.005;
+        }
+    }
+}
+
+class RetryTextActor implements IActor {
+    private readonly context: DrawingContext;
+    private readonly texts: string[];
+
+    private fade: number = 0;
+
+
+    constructor(context: DrawingContext, texts: string[]) {
+        this.context = context;
+        this.texts = texts;
+    }
+
+    public draw() {
+        const c = this.context.crc;
+        c.globalAlpha = this.fade;
+
+        c.font = "bold 48px serif";
+        c.textAlign = "center";
+        c.fillStyle = "blue";
+        c.fillText(this.texts[0], this.context.width / 2, this.context.height / 2);
+
+        c.font = "bold 28px serif";
+        c.textAlign = "center";
+        c.fillStyle = "blue";
+        c.fillText(this.texts[1], this.context.width / 2, this.context.height / 2 + 48);
+
         c.globalAlpha = 1;
     }
 
@@ -739,9 +805,12 @@ class ScoreActor implements IScore {
         this.width = this.context.width / 10;
         this.height = this.context.height / 10;
     }
+    private getNow() {
+        this.then = new Date();
+    }
 
     public draw() {
-        this.then = new Date();
+        if (!isOver) this.getNow();
         const c = this.context.crc;
         let time = new Date(this.then.getTime() - this.start.getTime());
         let text = (time.getMinutes() <= 9 ? "0" : "") + time.getMinutes() + ":" + (time.getSeconds() <= 9 ? "0" : "") + time.getSeconds()
