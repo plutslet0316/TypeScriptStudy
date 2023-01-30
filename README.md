@@ -49,8 +49,8 @@
 > [7주 - 오프라인 모임 ✔️](./week00/bounced_ball/)  
 > [8주 - Creating Types from Types: Generics ✔️](./week08/)  
 > [9주 - Creating Types from Types ✔️](./week09/)  
-> 10주 - Modules  
-> 11주 - Classes  
+> [10주 - Modules ✔️](./week10/)  
+> [11주 - Classes ✔️](./week11/)  
 
 </details>
 
